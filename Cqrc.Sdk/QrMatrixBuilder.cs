@@ -56,8 +56,11 @@ public static class QrMatrixBuilder
             }
         }
 
-        // 暗色模块（恒定深色）
-        m.Set(n - 8, 8, true);
+        // 格式信息区 + 暗色模块：先以浅色占位（评分阶段与 python-qrcode 的 test=True 一致），
+        // 数据放置时跳过，最后由 DrawFormatBits 写入真实位。
+        foreach (var (row, col) in FormatCells(n))
+            m.Set(row, col, false);
+        m.Set(n - 8, 8, false);
 
         var clone = m.Clone();
         lock (_blankCache) _blankCache[version] = clone;
@@ -91,23 +94,28 @@ public static class QrMatrixBuilder
                 m.Set(row + r, col + c, Math.Max(Math.Abs(r), Math.Abs(c)) != 1);
     }
 
-    /// <summary>写入格式信息（两处镜像）。</summary>
+    /// <summary>
+    /// 格式信息的 30 个模块位，前 15 个为竖直区（列 8），后 15 个为水平区（行 8），
+    /// 顺序与 ISO 的 bit0..bit14 一致。
+    /// </summary>
+    private static IEnumerable<(int row, int col)> FormatCells(int n)
+    {
+        for (int i = 0; i < 15; i++)
+            yield return i < 6 ? (i, 8) : i < 8 ? (i + 1, 8) : (n - 15 + i, 8);
+        for (int i = 0; i < 15; i++)
+            yield return i < 8 ? (8, n - 1 - i) : i < 9 ? (8, 7) : (8, 15 - i - 1);
+    }
+
+    /// <summary>写入格式信息（两处镜像）与暗色模块。</summary>
     public static void DrawFormatBits(QrMatrix m, int formatBits15)
     {
         int n = m.ModulesCount;
-        for (int i = 0; i < 15; i++)
+        int i = 0;
+        foreach (var (row, col) in FormatCells(n))
         {
-            bool dark = ((formatBits15 >> i) & 1) == 1;
-            if (i < 6) m.Set(i, 8, dark);
-            else if (i < 8) m.Set(i + 1, 8, dark);
-            else m.Set(n - 15 + i, 8, dark);
-        }
-        for (int i = 0; i < 15; i++)
-        {
-            bool dark = ((formatBits15 >> i) & 1) == 1;
-            if (i < 8) m.Set(8, n - 1 - i, dark);
-            else if (i < 9) m.Set(8, 15 - i, dark);
-            else m.Set(8, 15 - i - 1, dark);
+            bool dark = ((formatBits15 >> (i % 15)) & 1) == 1;
+            m.Set(row, col, dark);
+            i++;
         }
         m.Set(n - 8, 8, true);
     }
@@ -120,12 +128,9 @@ public static class QrMatrixBuilder
         int byteIndex = 0, bitIndex = 7;
         bool upward = true;
 
-        int col = n - 1;
-        while (col > 0)
+        for (int col = n - 1; col > 0; col -= 2)
         {
-            int c = col;
-            if (c <= 6) c--; // 跳过中间时序列
-
+            int c = col <= 6 ? col - 1 : col; // 跳过中间时序列（列 6）
             int row = upward ? n - 1 : 0;
             int inc = upward ? -1 : 1;
             while (true)
@@ -147,7 +152,6 @@ public static class QrMatrixBuilder
                 row += inc;
                 if (row < 0 || row >= n) { row -= inc; inc = -inc; break; }
             }
-            col -= 2;
             upward = !upward;
         }
     }

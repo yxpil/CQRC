@@ -37,7 +37,7 @@ public static class Iso21570
         var sb = new System.Text.StringBuilder();
         sb.Append('{');
         bool first = true;
-        foreach (var (key, value) in dict)
+        foreach (var (key, value) in dict.OrderBy(kv => kv.Key, StringComparer.Ordinal))
         {
             if (!first) sb.Append(',');
             first = false;

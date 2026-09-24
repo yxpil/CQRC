@@ -1,0 +1,11 @@
+# .NET 构建产物
+bin/
+obj/
+*.user
+
+# Node
+node_modules/
+
+# 本地调试脚手架（跨语言比对用的临时脚本与第三方解码器）
+js/dump/
+js/samples/

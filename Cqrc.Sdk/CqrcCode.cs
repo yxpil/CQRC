@@ -59,6 +59,9 @@ public sealed class CqrcCode
     public QrStyle Style { get; } = new();
     public int? Version { get; set; }
 
+    /// <summary>按 python-qrcode 的 optimize=4 规则切分数据段（混合数字/字母数字内容更紧凑）。</summary>
+    public bool Optimize { get; set; }
+
     private readonly List<string> _texts = new();
 
     /// <summary>追加要编码的文本（多段会顺序拼接为多个数据段）。</summary>
@@ -74,23 +77,24 @@ public sealed class CqrcCode
     /// <summary>实际选定的 QR 版本。</summary>
     public int ActualVersion { get; private set; }
 
-    /// <summary>选定的掩码（0-7）。</summary>
-    public int MaskPattern => Matrix.MaskPattern;
+    /// <summary>选定的掩码（0-7），需先 Generate()。</summary>
+    public int MaskPattern => (Matrix ?? throw new InvalidOperationException("请先生成。")).MaskPattern;
 
     /// <summary>完整生成：数据段 + 21570 段 + 纠错 + 矩阵。</summary>
     public QrMatrix Generate()
     {
         if (_texts.Count == 0) throw new InvalidOperationException("没有数据，先 AddData()");
 
-        var chunks = new List<QrDataChunk>();
         string full = string.Concat(_texts);
         if (Style.IncludeContentHash && (Style.Metadata is null || !Style.Metadata.ContainsKey("content_hash")))
         {
             if (Style.Metadata is null) Style.Metadata = new Dictionary<string, string?>();
             Style.Metadata["content_hash"] = Iso21570.ContentHash(full);
         }
-        foreach (var t in _texts)
-            chunks.Add(QrDataChunk.Auto(t));
+
+        var chunks = Optimize
+            ? QrDataChunk.SplitOptimal(full)
+            : _texts.Select(t => QrDataChunk.Auto(t)).ToList();
 
         // 21570 元数据段（必须最后）
         if (Style.Metadata is { Count: > 0 })

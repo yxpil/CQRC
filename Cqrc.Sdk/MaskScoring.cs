@@ -59,7 +59,10 @@ public static class MaskScoring
         return lost;
     }
 
-    /// <summary>规则 2：2x2 同色块 +3。</summary>
+    /// <summary>
+    /// 规则 2：2x2 同色块 +3。沿用 python-qrcode 的跳格优化（右上不同则跳过下一列），
+    /// 以保持与其掩码选择逐位一致。
+    /// </summary>
     private static int Level2(bool[,] m, int count)
     {
         int lost = 0;
@@ -67,58 +70,63 @@ public static class MaskScoring
         {
             for (int col = 0; col < count - 1; col++)
             {
-                bool v = m[row, col];
-                if (v == m[row, col + 1] && v == m[row + 1, col] && v == m[row + 1, col + 1])
-                    lost += 3;
+                bool topRight = m[row, col + 1];
+                if (topRight != m[row + 1, col + 1]) col++;          // 跳过下一列：abcd 与 abef 均不计分
+                else if (topRight != m[row, col]) continue;
+                else if (topRight != m[row + 1, col]) continue;
+                else lost += 3;
             }
         }
         return lost;
     }
 
-    // 1:1:3:1:1 比例图形（前后 4 个浅色）+40。两个方向：
-    //   000010111010000 与 000010111010000 的反色（含 111101000101111 形式）
-    private static readonly bool[] PatternA = { true, false, true, true, true, false, true, false, false, false, false };
-    private static readonly bool[] PatternB = { false, false, false, false, true, false, true, true, true, false, true };
+    // python-qrcode lost_point_level3 的两个 11 模块窗口（深色=1）：
+    //   pattern1 = 10111010000（右侧带 4 格浅色）
+    //   pattern2 = 00001011101（左侧带 4 格浅色）
+    private static readonly bool[] Pattern1 = { true, false, true, true, true, false, true, false, false, false, false };
+    private static readonly bool[] Pattern2 = { false, false, false, false, true, false, true, true, true, false, true };
 
-    /// <summary>规则 3：finder 类 1:1:3:1:1 图形 +40。</summary>
+    /// <summary>规则 3：1:1:3:1:1 图形 +40（含 python-qrcode 的 Horspool 跳格）。</summary>
     private static int Level3(bool[,] m, int count)
     {
         int lost = 0;
         for (int row = 0; row < count; row++)
             for (int col = 0; col <= count - 11; col++)
-                lost += MatchPattern(m, row, col, horizontal: true) ? 40 : 0;
+            {
+                if (Matches(m, row, col, true)) lost += 40;
+                if (m[row, col + 10]) col++; // 末位深色时两种图形至少偏移 2，可跳 1 格
+            }
         for (int col = 0; col < count; col++)
             for (int row = 0; row <= count - 11; row++)
-                lost += MatchPattern(m, row, col, horizontal: false) ? 40 : 0;
+            {
+                if (Matches(m, row, col, false)) lost += 40;
+                if (m[row + 10, col]) row++;
+            }
         return lost;
     }
 
-    private static bool MatchPattern(bool[,] m, int row, int col, bool horizontal)
+    private static bool Matches(bool[,] m, int row, int col, bool horizontal)
     {
-        bool v(int r, int c) => horizontal ? m[r, c] : m[c, r];
+        bool V(int offset) => horizontal ? m[row, col + offset] : m[row + offset, col];
         for (int p = 0; p < 2; p++)
         {
-            var pattern = p == 0 ? PatternA : PatternB;
+            var pattern = p == 0 ? Pattern1 : Pattern2;
             bool ok = true;
             for (int i = 0; i < 11; i++)
-            {
-                int r = horizontal ? row : row + i;
-                int c = horizontal ? col + i : col;
-                if (v(r, c) != pattern[i]) { ok = false; break; }
-            }
+                if (V(i) != pattern[i]) { ok = false; break; }
             if (ok) return true;
         }
         return false;
     }
 
-    /// <summary>规则 4：深色占比偏离 50% 每 5% +10。</summary>
+    /// <summary>规则 4：深色占比偏离 50% 每 5% +10（浮点占比，与 python-qrcode 一致）。</summary>
     private static int Level4(bool[,] m, int count)
     {
         int dark = 0;
         for (int row = 0; row < count; row++)
             for (int col = 0; col < count; col++)
                 if (m[row, col]) dark++;
-        int percent = dark * 100 / (count * count);
-        return (int)Math.Abs(percent - 50) / 5 * 10;
+        double percent = (double)dark / (count * count) * 100;
+        return (int)(Math.Abs(percent - 50) / 5) * 10;
     }
 }

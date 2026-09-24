@@ -1,55 +1,42 @@
-﻿using System.Text;
+using System.Text;
 using Cqrc;
 
-class D
-{
-    static List<QrDataChunk> Split(string data)
-    {
-        var chunks = new List<QrDataChunk>();
-        int i = 0;
-        while (i < data.Length)
-        {
-            int j = i;
-            while (j < data.Length && char.IsDigit(data[j])) j++;
-            if (j - i >= 4)
-            {
-                chunks.Add(new QrDataChunk(QrMode.Numeric, Encoding.UTF8.GetBytes(data[i..j])));
-                i = j; continue;
-            }
-            int k = i;
-            while (k < data.Length && Alphanumeric.Table.Contains(data[k])) k++;
-            if (k - i >= 4)
-            {
-                chunks.Add(new QrDataChunk(QrMode.Alphanumeric, Encoding.UTF8.GetBytes(data[i..k])));
-                i = k; continue;
-            }
-            int l = i + 1;
-            while (l < data.Length)
-            {
-                int m2 = l;
-                while (m2 < data.Length && Alphanumeric.Table.Contains(data[m2])) m2++;
-                if (m2 - l >= 4) break;
-                int num = l;
-                while (num < data.Length && char.IsDigit(data[num])) num++;
-                if (num - l >= 4) break;
-                l++;
-            }
-            chunks.Add(new QrDataChunk(QrMode.Byte, Encoding.UTF8.GetBytes(data[i..l])));
-            i = l;
-        }
-        return chunks;
-    }
+// 诊断工具：打印每个用例的分段、8 种掩码罚分与最终矩阵，供跨语言（JS / python-qrcode）比对。
+// 用法：dotnet run --project Cqrc.Demo -- [输出目录]
+string outDir = args.Length > 0 ? args[0] : Path.Combine(AppContext.BaseDirectory, "cqrc-dump");
+Directory.CreateDirectory(outDir);
 
-    static void Main()
+(string name, string data, ErrorCorrectionLevel ec, int? version)[] cases =
+{
+    ("numeric", "1234567890123456", ErrorCorrectionLevel.L, null),
+    ("hello", "Hello, CQRC! 彩色二维码", ErrorCorrectionLevel.M, null),
+    ("url", "https://github.com/yxpil/CQRC", ErrorCorrectionLevel.Q, null),
+    ("utf8", "你好，世界！こんにちは \U0001F3A8", ErrorCorrectionLevel.H, null),
+};
+
+foreach (var (name, data, ec, version) in cases)
+{
+    var chunks = QrDataChunk.SplitOptimal(data);
+    var encoded = QrEncoder.Encode(chunks, ec, version);
+    var matrix = QrMatrixBuilder.Build(encoded);
+    var grid = matrix.ToArray();
+    int n = grid.GetLength(0);
+
+    var report = new StringBuilder();
+    report.AppendLine($"# {name}: v{encoded.Version} ec={ec} mask={matrix.MaskPattern} n={n}");
+    foreach (var c in chunks)
+        report.AppendLine($"chunk {c.Mode} chars={c.CharCount} bytes={c.Data.Length} payload_bits={c.PayloadBits}");
+    for (int mask = 0; mask < 8; mask++)
     {
-        var data = string.Concat(Enumerable.Repeat("CQRC v1: 1234567890123456789012345678901234567890", 8)) + "END";
-        var chunks = Split(data);
-        foreach (var c in chunks)
-            System.Console.WriteLine($"{c.Mode} chars={c.CharCount} bytes={c.Data.Length} payload={c.PayloadBits}");
-        int needed = chunks.Sum(c => 4 + QrTables.LengthBits(c.Mode, 11) + c.PayloadBits);
-        System.Console.WriteLine($"needed@v11={needed} cap={QrTables.DataBitCapacity(11, ErrorCorrectionLevel.M)}");
-        System.Console.WriteLine($"BestVersion={QrEncoder.BestVersion(chunks, ErrorCorrectionLevel.M)}");
-        foreach (var b in QrTables.RsBlocks(11, ErrorCorrectionLevel.M))
-            System.Console.WriteLine($"block total={b.TotalCount} data={b.DataCount}");
+        var probe = QrMatrixBuilder.BuildBlank(encoded.Version);
+        QrMatrixBuilder.MapData(probe, encoded.CodeWords, mask);
+        report.AppendLine($"mask_score {mask} {MaskScoring.LostPoint(probe.ToArray())}");
     }
+    for (int r = 0; r < n; r++)
+        report.AppendLine(new string(grid[r, 0] ? '1' : '0', 0) +
+            string.Concat(Enumerable.Range(0, n).Select(c => grid[r, c] ? '1' : '0')));
+
+    string path = Path.Combine(outDir, $"{name}.txt");
+    File.WriteAllText(path, report.ToString());
+    Console.WriteLine($"{name}: v{encoded.Version} mask{matrix.MaskPattern} -> {path}");
 }

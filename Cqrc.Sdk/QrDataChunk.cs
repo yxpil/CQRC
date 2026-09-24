@@ -47,6 +47,57 @@ public sealed class QrDataChunk
         return new QrDataChunk(QrMode.Byte, Encoding.UTF8.GetBytes(text));
     }
 
+    /// <summary>
+    /// python-qrcode 的 <c>optimize</c> 等价切分（optimal_data_chunks + _optimal_split）：
+    /// 在 UTF-8 字节流上先取最长数字串（≥minimum），再对剩余段取最长字母数字串，其余为字节段。
+    /// </summary>
+    public static List<QrDataChunk> SplitOptimal(string text, int minimum = 4)
+    {
+        var bytes = Encoding.UTF8.GetBytes(text);
+        // 短输入时 python 使用锚定正则：整串全数字/全字母数字才压缩，否则整体按字节处理。
+        bool anchored = bytes.Length <= minimum;
+        var chunks = new List<QrDataChunk>();
+
+        foreach (var (matched, seg) in SplitRuns(bytes, b => b is >= (byte)'0' and <= (byte)'9', minimum, anchored))
+        {
+            if (matched) { chunks.Add(new QrDataChunk(QrMode.Numeric, seg)); continue; }
+            foreach (var (isAlpha, sub) in SplitRuns(seg, IsAlphaByte, minimum, anchored))
+                chunks.Add(new QrDataChunk(isAlpha ? QrMode.Alphanumeric : QrMode.Byte, sub));
+        }
+        return chunks;
+    }
+
+    private static bool IsAlphaByte(byte b) => b < 0x80 && Alphanumeric.Table.IndexOf((char)b) >= 0;
+
+    /// <summary>左most-最长游标切分，等价于对 pattern 的 <c>re.search</c> 迭代；未命中的间隙按原序输出。</summary>
+    private static List<(bool matched, byte[] segment)> SplitRuns(
+        byte[] data, Func<byte, bool> predicate, int minimum, bool anchored)
+    {
+        var parts = new List<(bool, byte[])>();
+        if (data.Length == 0) return parts;
+        if (anchored)
+            return new List<(bool, byte[])> { (data.All(predicate), data) };
+
+        int cursor = 0, i = 0;
+        while (i < data.Length)
+        {
+            int run = i;
+            while (run < data.Length && predicate(data[run])) run++;
+            if (run - i >= minimum)
+            {
+                if (i > cursor) parts.Add((false, data[cursor..i]));
+                parts.Add((true, data[i..run]));
+                cursor = i = run;
+            }
+            else
+            {
+                i = run > i ? run : i + 1; // 短游程内的起点同样无法构成命中，整体跳过
+            }
+        }
+        if (cursor < data.Length) parts.Add((false, data[cursor..]));
+        return parts;
+    }
+
     /// <summary>按 ISO 格式写入缓冲：模式(4bit) + 长度(countBits) + 数据。</summary>
     public void Write(BitBuffer buffer, int version)
     {
