@@ -1,0 +1,13 @@
+C:\Users\User\Desktop\CQRC\Cqrc.Sdk\obj\Debug\net10.0\Cqrc.Sdk.GeneratedMSBuildEditorConfig.editorconfig
+C:\Users\User\Desktop\CQRC\Cqrc.Sdk\obj\Debug\net10.0\Cqrc.Sdk.AssemblyInfoInputs.cache
+C:\Users\User\Desktop\CQRC\Cqrc.Sdk\obj\Debug\net10.0\Cqrc.Sdk.AssemblyInfo.cs
+C:\Users\User\Desktop\CQRC\Cqrc.Sdk\obj\Debug\net10.0\Cqrc.Sdk.csproj.CoreCompileInputs.cache
+C:\Users\User\Desktop\CQRC\Cqrc.Sdk\bin\Debug\net10.0\Cqrc.Sdk.deps.json
+C:\Users\User\Desktop\CQRC\Cqrc.Sdk\bin\Debug\net10.0\Cqrc.Sdk.dll
+C:\Users\User\Desktop\CQRC\Cqrc.Sdk\bin\Debug\net10.0\Cqrc.Sdk.pdb
+C:\Users\User\Desktop\CQRC\Cqrc.Sdk\bin\Debug\net10.0\Cqrc.Sdk.xml
+C:\Users\User\Desktop\CQRC\Cqrc.Sdk\obj\Debug\net10.0\Cqrc.Sdk.dll
+C:\Users\User\Desktop\CQRC\Cqrc.Sdk\obj\Debug\net10.0\refint\Cqrc.Sdk.dll
+C:\Users\User\Desktop\CQRC\Cqrc.Sdk\obj\Debug\net10.0\Cqrc.Sdk.xml
+C:\Users\User\Desktop\CQRC\Cqrc.Sdk\obj\Debug\net10.0\Cqrc.Sdk.pdb
+C:\Users\User\Desktop\CQRC\Cqrc.Sdk\obj\Debug\net10.0\ref\Cqrc.Sdk.dll

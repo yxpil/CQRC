@@ -1,0 +1,19 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFrameworks>net8.0;net10.0</TargetFrameworks>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <LangVersion>latest</LangVersion>
+    <RootNamespace>Cqrc</RootNamespace>
+    <AssemblyName>Cqrc.Sdk</AssemblyName>
+    <Title>CQRC</Title>
+    <Description>CQRC - a colored QR code SDK written from scratch (QR 2000 spec, GF(256) Reed-Solomon, ISO 21570 style metadata, PNG/SVG/PDF renderers, no third-party dependencies).</Description>
+    <Authors>CQRC contributors</Authors>
+    <PackageTags>qr;colored-qr;barcode;reedsolomon;pdf417</PackageTags>
+    <Version>0.1.0</Version>
+    <GenerateDocumentationFile>true</GenerateDocumentationFile>
+    <NoWarn>$(NoWarn);CS1591</NoWarn>
+  </PropertyGroup>
+
+</Project>
