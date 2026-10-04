@@ -148,3 +148,15 @@ PY
 - 不支持汉字（Kanji）模式的自动编码，`QrMode.Kanji` 仅留位。
 - ISO/IEC 21570 元数据段按本仓库注释的字节布局写入，常见扫码器只把该段当作普通字节数据读出，不做 21570 语义解析。
 - JS 版 `logo` 仅接受已加载完成的 `HTMLImageElement`；PNG 解析与 Logo 叠加在 C# 版中实现得更完整。
+
+---
+
+<div align="center">
+
+<a href="https://github.com/yxpil/CQRC">
+  <img width="100%" src="https://alittlecatgirlpanel.yxp.hk/card?repo=yxpil/CQRC" alt="gh-card · yxpil/CQRC" />
+</a>
+
+<sub>Powered by <a href="https://alittlecatgirlpanel.yxp.hk"><b>gh-card</b></a> · 粉色手写体 README 仓库名片</sub>
+
+</div>
